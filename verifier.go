@@ -84,20 +84,27 @@ func AccessTokenSetter(config AccessTokenSetterConfig) iris.Handler {
 		ctx.Next()
 	}
 }
-
+func checkUserExists(ctx iris.Context) bool {
+	user := ctx.User()
+	if user == nil {
+		ctx.StopWithText(401, "Access token is required")
+		return false
+	}
+	return true
+}
 func Require() iris.Handler {
 	return func(ctx iris.Context) {
-		user := ctx.User()
-		if user == nil {
-			ctx.StopWithText(401, "Access token is required")
-			return
+		if checkUserExists(ctx) {
+			ctx.Next()
 		}
-		ctx.Next()
 	}
 }
 
 func RBAC(roles []string) iris.Handler {
 	return func(ctx iris.Context) {
+		if !checkUserExists(ctx) {
+			return
+		}
 		userRoles, err := ctx.User().GetRoles()
 		if err != nil {
 			ctx.StopWithError(iris.StatusUnauthorized, err)
@@ -140,6 +147,9 @@ func indexStrs(ss []string, s string) int {
 
 func Scope(givenScope ...string) iris.Handler {
 	return func(ctx iris.Context) {
+		if !checkUserExists(ctx) {
+			return
+		}
 		if len(givenScope) == 0 {
 			ctx.Next()
 			return
