@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/jwt"
@@ -103,25 +104,63 @@ func RBAC(roles []string) iris.Handler {
 			return
 		}
 		if !findRole(roles, userRoles) {
-			ctx.StopWithJSON(iris.StatusForbidden, "Forbidden")
+			ctx.StopWithText(iris.StatusForbidden, "Forbidden")
 			return
 		}
 		ctx.Next()
 	}
 }
-
+func intersection(a, b []string) []string {
+	m := make(map[string]bool)
+	for _, v := range a {
+		m[v] = true
+	}
+	var r []string
+	for _, v := range b {
+		if m[v] {
+			r = append(r, v)
+		}
+	}
+	return r
+}
 func findRole(giveRoles, myRoles []string) bool {
 	if len(giveRoles) == 0 {
 		return true
 	}
-	giveRolesMap := make(map[string]bool, len(giveRoles))
-	for _, v := range giveRoles {
-		giveRolesMap[v] = true
-	}
-	for _, v := range myRoles {
-		if giveRolesMap[v] {
-			return true
+	return len(intersection(giveRoles, myRoles)) > 0
+}
+func indexStrs(ss []string, s string) int {
+	for i, v := range ss {
+		if v == s {
+			return i
 		}
 	}
-	return false
+	return -1
+}
+
+func Scope(givenScope ...string) iris.Handler {
+	return func(ctx iris.Context) {
+		if len(givenScope) == 0 {
+			ctx.Next()
+			return
+		}
+		scope, err := ctx.User().GetField("scope")
+		if err != nil {
+			ctx.StopWithError(iris.StatusUnauthorized, err)
+			return
+		}
+		if scopeStr, ok := scope.(string); ok {
+			scopes := strings.Split(scopeStr, " ")
+			if indexStrs(scopes, "*") != -1 {
+				ctx.Next()
+				return
+			}
+			if len(intersection(givenScope, scopes)) > 0 {
+				ctx.Next()
+				return
+			}
+
+		}
+		ctx.StopWithText(iris.StatusForbidden, "Invalid scope")
+	}
 }
