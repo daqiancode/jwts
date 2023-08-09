@@ -148,7 +148,6 @@ func indexStrs(ss []string, s string) int {
 
 func CheckRBAC(ctx iris.Context, roles ...string) bool {
 	if !checkUserExists(ctx) {
-		ctx.StopWithText(iris.StatusUnauthorized, "please signin")
 		return false
 	}
 	if len(roles) == 0 {
@@ -168,7 +167,6 @@ func CheckRBAC(ctx iris.Context, roles ...string) bool {
 
 func CheckSBAC(ctx iris.Context, scopes ...string) bool {
 	if !checkUserExists(ctx) {
-		ctx.StopWithText(iris.StatusUnauthorized, "please signin")
 		return false
 	}
 	if len(scopes) == 0 {
