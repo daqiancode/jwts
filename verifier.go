@@ -148,6 +148,7 @@ func indexStrs(ss []string, s string) int {
 
 func CheckRBAC(roles []string, ctx iris.Context) bool {
 	if !checkUserExists(ctx) {
+		ctx.StopWithText(iris.StatusUnauthorized, "please signin")
 		return false
 	}
 	if len(roles) == 0 {
@@ -155,11 +156,11 @@ func CheckRBAC(roles []string, ctx iris.Context) bool {
 	}
 	tokenRoles, err := ctx.User().GetRoles()
 	if err != nil {
-		ctx.StopWithError(iris.StatusUnauthorized, err)
+		ctx.StopWithText(iris.StatusUnauthorized, "invalid roles")
 		return false
 	}
 	if !findRole(roles, tokenRoles) {
-		ctx.StopWithText(iris.StatusForbidden, "Forbidden")
+		ctx.StopWithText(iris.StatusForbidden, "roles not matched")
 		return false
 	}
 	return true
@@ -167,6 +168,7 @@ func CheckRBAC(roles []string, ctx iris.Context) bool {
 
 func CheckSBAC(scopes []string, ctx iris.Context) bool {
 	if !checkUserExists(ctx) {
+		ctx.StopWithText(iris.StatusUnauthorized, "please signin")
 		return false
 	}
 	if len(scopes) == 0 {
@@ -174,7 +176,7 @@ func CheckSBAC(scopes []string, ctx iris.Context) bool {
 	}
 	tokenScope, err := ctx.User().GetField("scope")
 	if err != nil {
-		ctx.StopWithError(iris.StatusUnauthorized, err)
+		ctx.StopWithText(iris.StatusUnauthorized, "invalid scopes")
 		return false
 	}
 	if scopeStr, ok := tokenScope.(string); ok {
@@ -187,6 +189,7 @@ func CheckSBAC(scopes []string, ctx iris.Context) bool {
 		}
 
 	}
+	ctx.StopWithText(iris.StatusUnauthorized, "roles not matched")
 	return false
 }
 
