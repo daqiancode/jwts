@@ -100,23 +100,24 @@ func Require() iris.Handler {
 	}
 }
 
+// Role based access controll filter
 func RBAC(roles []string) iris.Handler {
 	return func(ctx iris.Context) {
-		if !checkUserExists(ctx) {
-			return
+		if CheckRBAC(roles, ctx) {
+			ctx.Next()
 		}
-		userRoles, err := ctx.User().GetRoles()
-		if err != nil {
-			ctx.StopWithError(iris.StatusUnauthorized, err)
-			return
-		}
-		if !findRole(roles, userRoles) {
-			ctx.StopWithText(iris.StatusForbidden, "Forbidden")
-			return
-		}
-		ctx.Next()
 	}
 }
+
+// Scope based access controll filter
+func Scope(scope ...string) iris.Handler {
+	return func(ctx iris.Context) {
+		if CheckSBAC(scope, ctx) {
+			ctx.Next()
+		}
+	}
+}
+
 func intersection(a, b []string) []string {
 	m := make(map[string]bool)
 	for _, v := range a {
@@ -145,32 +146,62 @@ func indexStrs(ss []string, s string) int {
 	return -1
 }
 
-func Scope(givenScope ...string) iris.Handler {
-	return func(ctx iris.Context) {
-		if !checkUserExists(ctx) {
-			return
-		}
-		if len(givenScope) == 0 {
-			ctx.Next()
-			return
-		}
-		scope, err := ctx.User().GetField("scope")
-		if err != nil {
-			ctx.StopWithError(iris.StatusUnauthorized, err)
-			return
-		}
-		if scopeStr, ok := scope.(string); ok {
-			scopes := strings.Split(scopeStr, " ")
-			if indexStrs(scopes, "*") != -1 {
-				ctx.Next()
-				return
-			}
-			if len(intersection(givenScope, scopes)) > 0 {
-				ctx.Next()
-				return
-			}
-
-		}
-		ctx.StopWithText(iris.StatusForbidden, "Invalid scope")
+func CheckRBAC(roles []string, ctx iris.Context) bool {
+	if !checkUserExists(ctx) {
+		return false
 	}
+	if len(roles) == 0 {
+		return true
+	}
+	tokenRoles, err := ctx.User().GetRoles()
+	if err != nil {
+		ctx.StopWithError(iris.StatusUnauthorized, err)
+		return false
+	}
+	if !findRole(roles, tokenRoles) {
+		ctx.StopWithText(iris.StatusForbidden, "Forbidden")
+		return false
+	}
+	return true
+}
+
+func CheckSBAC(scopes []string, ctx iris.Context) bool {
+	if !checkUserExists(ctx) {
+		return false
+	}
+	if len(scopes) == 0 {
+		return true
+	}
+	tokenScope, err := ctx.User().GetField("scope")
+	if err != nil {
+		ctx.StopWithError(iris.StatusUnauthorized, err)
+		return false
+	}
+	if scopeStr, ok := tokenScope.(string); ok {
+		tokenScopes := strings.Split(scopeStr, " ")
+		if indexStrs(scopes, "*") != -1 {
+			return true
+		}
+		if len(intersection(tokenScopes, scopes)) > 0 {
+			return true
+		}
+
+	}
+	return false
+}
+
+func IsTokenExists(ctx iris.Context) bool {
+	user := ctx.User()
+	return user != nil
+}
+
+func GetScopes(ctx iris.Context) ([]string, error) {
+	scope, err := ctx.User().GetField("scope")
+	if err != nil {
+		return nil, err
+	}
+	if scopeStr, ok := scope.(string); ok {
+		return strings.Split(scopeStr, " "), nil
+	}
+	return nil, nil
 }
