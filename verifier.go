@@ -103,7 +103,7 @@ func Require() iris.Handler {
 // Role based access controll filter
 func RBAC(roles []string) iris.Handler {
 	return func(ctx iris.Context) {
-		if CheckRBAC(roles, ctx) {
+		if CheckRBAC(ctx, roles...) {
 			ctx.Next()
 		}
 	}
@@ -112,7 +112,7 @@ func RBAC(roles []string) iris.Handler {
 // Scope based access controll filter
 func Scope(scope ...string) iris.Handler {
 	return func(ctx iris.Context) {
-		if CheckSBAC(scope, ctx) {
+		if CheckSBAC(ctx, scope...) {
 			ctx.Next()
 		}
 	}
