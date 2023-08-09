@@ -84,17 +84,17 @@ func AccessTokenSetter(config AccessTokenSetterConfig) iris.Handler {
 		ctx.Next()
 	}
 }
-func checkUserExists(ctx iris.Context) bool {
+func checkUserExists(ctx iris.Context) error {
 	user := ctx.User()
 	if user == nil {
 		ctx.StopWithText(401, "Access token is required")
-		return false
+		return errors.New("Access token is required")
 	}
-	return true
+	return nil
 }
 func Require() iris.Handler {
 	return func(ctx iris.Context) {
-		if checkUserExists(ctx) {
+		if nil == checkUserExists(ctx) {
 			ctx.Next()
 		}
 	}
@@ -103,7 +103,7 @@ func Require() iris.Handler {
 // Role based access controll filter
 func RBAC(roles []string) iris.Handler {
 	return func(ctx iris.Context) {
-		if CheckRBAC(ctx, roles...) {
+		if nil == CheckRBAC(ctx, roles...) {
 			ctx.Next()
 		}
 	}
@@ -112,7 +112,7 @@ func RBAC(roles []string) iris.Handler {
 // Scope based access controll filter
 func Scope(scope ...string) iris.Handler {
 	return func(ctx iris.Context) {
-		if CheckSBAC(ctx, scope...) {
+		if nil == CheckSBAC(ctx, scope...) {
 			ctx.Next()
 		}
 	}
@@ -146,49 +146,49 @@ func indexStrs(ss []string, s string) int {
 	return -1
 }
 
-func CheckRBAC(ctx iris.Context, roles ...string) bool {
-	if !checkUserExists(ctx) {
-		return false
+func CheckRBAC(ctx iris.Context, roles ...string) error {
+	if err := checkUserExists(ctx); err != nil {
+		return err
 	}
 	if len(roles) == 0 {
-		return true
+		return nil
 	}
 	tokenRoles, err := ctx.User().GetRoles()
 	if err != nil {
 		ctx.StopWithText(iris.StatusUnauthorized, "invalid roles")
-		return false
+		return errors.New("invalid roles")
 	}
 	if !findRole(roles, tokenRoles) {
 		ctx.StopWithText(iris.StatusForbidden, "roles not matched")
-		return false
+		return errors.New("roles not matched")
 	}
-	return true
+	return nil
 }
 
-func CheckSBAC(ctx iris.Context, scopes ...string) bool {
-	if !checkUserExists(ctx) {
-		return false
+func CheckSBAC(ctx iris.Context, scopes ...string) error {
+	if err := checkUserExists(ctx); err != nil {
+		return err
 	}
 	if len(scopes) == 0 {
-		return true
+		return nil
 	}
 	tokenScope, err := ctx.User().GetField("scope")
 	if err != nil {
 		ctx.StopWithText(iris.StatusUnauthorized, "invalid scopes")
-		return false
+		return err
 	}
 	if scopeStr, ok := tokenScope.(string); ok {
 		tokenScopes := strings.Split(scopeStr, " ")
 		if indexStrs(scopes, "*") != -1 {
-			return true
+			return nil
 		}
 		if len(intersection(tokenScopes, scopes)) > 0 {
-			return true
+			return nil
 		}
 
 	}
 	ctx.StopWithText(iris.StatusUnauthorized, "roles not matched")
-	return false
+	return errors.New("roles not matched")
 }
 
 func IsTokenExists(ctx iris.Context) bool {
