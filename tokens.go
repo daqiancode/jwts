@@ -31,12 +31,7 @@ type RefreshToken struct {
 
 func ParseAccessToken(accessToken string, publicKey string) (AccessToken, error) {
 	var token AccessToken
-	claim, err := JwtVerify([]byte(accessToken), publicKey)
-	if err != nil {
-		return token, err
-	}
-
-	err = claim.Claims(&token)
+	_, err := JwtSigner{}.Decode(accessToken, publicKey, &token)
 	return token, err
 }
 
@@ -122,12 +117,13 @@ func (s AccessToken) GetField(key string) (interface{}, error) {
 
 func ParseRefreshToken(refreshToken string, publicKey string) (RefreshToken, error) {
 	var token RefreshToken
-	claim, err := JwtVerify([]byte(refreshToken), publicKey)
-	if err != nil {
-		return token, err
-	}
+	// claim, err := JwtVerify([]byte(refreshToken), publicKey)
+	// if err != nil {
+	// 	return token, err
+	// }
 
-	err = claim.Claims(&token)
+	// err = claim.Claims(&token)
+	_, err := JwtSigner{}.Decode(refreshToken, publicKey, &token)
 	return token, err
 }
 
