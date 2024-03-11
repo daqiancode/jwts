@@ -79,15 +79,15 @@ func NewAccessTokens(alg SignAlg, privateKey string, idLen int) *AccessTokens {
 	return &AccessTokens{alg: alg, privateKey: privateKey, idLen: idLen}
 }
 
-func (a *AccessTokens) GenerateAccessToken(uid, roles, scope, refreshTokenID string, maxAgeSecs int64) (string, error) {
-	accessToken := AccessToken{Claims: jwt.Claims{ID: UUID(a.idLen), Subject: uid, Expiry: time.Now().Unix() + maxAgeSecs}, Roles: roles, Scope: scope, Rid: refreshTokenID}
+func (a *AccessTokens) GenerateAccessToken(tokenId, uid, roles, scope, refreshTokenID string, maxAgeSecs int64) (string, error) {
+	accessToken := AccessToken{Claims: jwt.Claims{ID: tokenId, Subject: uid, Expiry: time.Now().Unix() + maxAgeSecs}, Roles: roles, Scope: scope, Rid: refreshTokenID}
 	return JwtSigner{}.Encode(a.alg, a.privateKey, accessToken)
 }
 
-func (a *AccessTokens) GenerateRefreshToken(uid, roles, scope, encryptedPassword string, maxAgeSecs int64) (string, error) {
+func (a *AccessTokens) GenerateRefreshToken(tokenId, uid, roles, scope, encryptedPassword string, maxAgeSecs int64) (string, error) {
 	expiry := time.Now().Unix() + maxAgeSecs
 	refreshToken := &RefreshToken{
-		Claims: jwt.Claims{ID: UUID(a.idLen), Subject: uid, Expiry: expiry},
+		Claims: jwt.Claims{ID: tokenId, Subject: uid, Expiry: expiry},
 		Scope:  scope,
 		V:      CreateRefreshTokenVerfication(encryptedPassword, uid, roles, maxAgeSecs),
 	}
