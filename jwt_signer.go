@@ -72,11 +72,10 @@ var UUIDLen = 20
 type AccessTokens struct {
 	alg        SignAlg
 	privateKey string
-	idLen      int
 }
 
-func NewAccessTokens(alg SignAlg, privateKey string, idLen int) *AccessTokens {
-	return &AccessTokens{alg: alg, privateKey: privateKey, idLen: idLen}
+func NewAccessTokens(alg SignAlg, privateKey string) *AccessTokens {
+	return &AccessTokens{alg: alg, privateKey: privateKey}
 }
 
 func (a *AccessTokens) GenerateAccessToken(tokenId, uid, roles, scope, refreshTokenID string, maxAgeSecs int64) (string, error) {
